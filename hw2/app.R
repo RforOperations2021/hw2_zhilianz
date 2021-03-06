@@ -65,7 +65,7 @@ ui <- dashboardPage(
             ),
             
             
-            # Second tab content
+            # Second tab content generate reactive charts based on how many states selected
             tabItem(tabName = "chart",
                     fluidRow(
                         column(4,
@@ -96,11 +96,11 @@ ui <- dashboardPage(
                     
                     
             ),
-            # third tab content
+            # third tab content, analyze relationship between stats for selected states
             tabItem(tabName = "analyze",
                     fluidRow(
                         column(4,
-                               h4("You can select two statistics and plot them to see the relationship between two stats"),
+                               h4("You can select two statistics and plot  to see the relationship between them"),
                                selectInput("select_stat","Select a statistics you want",choices = colnames(data)[2:6],selected = 'case'),
                                selectInput("select_stat2","Select 2nd statistics you need to analyze",choices = colnames(data)[2:6],selected= 'death'),
                                
@@ -112,7 +112,7 @@ ui <- dashboardPage(
                         )
                     )            
             ),
-            # fourth tab content
+            # fourth tab content, table output
             tabItem(tabName = "datatable",
                     DT::dataTableOutput("table")
             )
@@ -126,6 +126,7 @@ server <- function(input, output) {
         
         state_selected = input$select_state
         
+        #Create gauge outputs to display basic stat for specific state
         output$gauge1 <- flexdashboard::renderGauge({
             gauge(data$case[which(data$state == state_selected)], min = min(data$case), max = max(data$case)) 
         })  
@@ -161,12 +162,14 @@ server <- function(input, output) {
     
     
     observeEvent(input$size,
+                 #generated a random subset of entire dataset
                  selected_data <<- data %>% sample_n(input$size, replace = FALSE),
                  
     )
     
     observeEvent(c(input$size,input$select_stat,input$select_stat2),{
         
+        #generate four plots related to basic stats based on number of selected states
         output$plot1 <- renderPlot({
             slices <- selected_data$case
             pie(slices,label = selected_data$state,main = "Total cases proportion in selected states")
@@ -178,7 +181,7 @@ server <- function(input, output) {
             
         })
         output$plot3<- renderPlot({
-            ggplot(selected_data, aes(x =  fatality, y = state)) + geom_point(size = 5, aes(color = 'darkblue'))+ggtitle("Fatality rate in selected states")
+            ggplot(selected_data, aes(x =  fatality, y = state)) + geom_point(size = 5, color = 'orange')+ggtitle("Fatality rate in selected states")
             
             
         })
@@ -187,6 +190,7 @@ server <- function(input, output) {
             
             
         })
+        #generate the plot to illustrate the relationship between two stats 
         output$plot5 <- renderPlot({
             ggplot(selected_data, aes_string(x = input$select_stat, y = input$select_stat2 , fill = "state")) +
                 geom_point(stat = "identity", size=5,aes(color=state)) +
@@ -196,7 +200,7 @@ server <- function(input, output) {
                 theme_bw()
         }) 
         
-        
+        #Create table output
         output$table = DT::renderDataTable(
             DT::datatable(data = selected_data,
                           options = list(pageLength = 10),
